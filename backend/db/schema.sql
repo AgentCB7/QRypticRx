@@ -1,6 +1,3 @@
--- QRypticRx Database Schema
--- Run this against your Supabase PostgreSQL instance
-
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
@@ -8,9 +5,16 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(20) NOT NULL CHECK (role IN ('doctor', 'pharmacist')),
+  role VARCHAR(20) NOT NULL CHECK (role IN ('doctor', 'pharmacist', 'admin')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
   public_key TEXT,
   pharmacy_name VARCHAR(255),
+  license_number VARCHAR(100),
+  affiliation VARCHAR(255),
+  applicant_note TEXT,
+  rejection_reason TEXT,
+  reviewed_by UUID REFERENCES users(id),
+  reviewed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -31,7 +35,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  prescription_id UUID NOT NULL REFERENCES prescriptions(id),
+  prescription_id UUID REFERENCES prescriptions(id),
   pharmacist_id UUID NOT NULL REFERENCES users(id),
   pharmacy_name VARCHAR(255) NOT NULL,
   action VARCHAR(100) NOT NULL,
@@ -42,3 +46,4 @@ CREATE INDEX IF NOT EXISTS idx_prescriptions_doctor_id ON prescriptions(doctor_i
 CREATE INDEX IF NOT EXISTS idx_prescriptions_status ON prescriptions(status);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_prescription_id ON audit_logs(prescription_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_pharmacist_id ON audit_logs(pharmacist_id);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
