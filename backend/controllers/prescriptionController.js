@@ -15,10 +15,11 @@ function buildPayload(fields) {
 }
 
 async function createPrescription(req, res) {
-  const { patient_name, patient_ic, medication, dosage, instructions, valid_until } = req.body;
+  const { patient_name, patient_ic, medication, dosage, valid_until } = req.body;
+  const instructions = req.body.instructions || '';
   const doctor_id = req.user.id;
 
-  if (!patient_name || !patient_ic || !medication || !dosage || !instructions || !valid_until) {
+  if (!patient_name || !patient_ic || !medication || !dosage || !valid_until) {
     return res.status(400).json({ error: 'All prescription fields are required' });
   }
 

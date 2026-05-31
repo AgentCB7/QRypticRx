@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   patient_ic VARCHAR(100) NOT NULL,
   medication VARCHAR(255) NOT NULL,
   dosage VARCHAR(255) NOT NULL,
-  instructions TEXT NOT NULL,
+  instructions TEXT,
   valid_until TIMESTAMPTZ NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'dispensed', 'expired')),
   hash VARCHAR(64) NOT NULL,
