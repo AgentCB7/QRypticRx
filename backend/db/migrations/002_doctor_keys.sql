@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS private_key_enc TEXT;
+
+COMMIT;

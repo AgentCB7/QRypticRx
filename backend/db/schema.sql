@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(20) NOT NULL CHECK (role IN ('doctor', 'pharmacist', 'admin')),
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   public_key TEXT,
+  private_key_enc TEXT,
   pharmacy_name VARCHAR(255),
   license_number VARCHAR(100),
   affiliation VARCHAR(255),
