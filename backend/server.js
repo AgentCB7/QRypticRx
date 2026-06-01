@@ -5,7 +5,7 @@ const seedAdmin = require('./db/seedAdmin');
 
 const PORT = process.env.PORT || 3000;
 
-for (const key of ['ADMIN_EMAIL', 'ADMIN_PASSWORD']) {
+for (const key of ['ADMIN_EMAIL', 'ADMIN_PASSWORD', 'KEY_SECRET']) {
   if (!process.env[key]) {
     console.error(`FATAL: ${key} environment variable is not set`);
     process.exit(1);
