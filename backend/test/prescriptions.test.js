@@ -109,3 +109,38 @@ test('verify flags a broken signature', async () => {
   expect(res.body.valid).toBe(false);
   expect(res.body.reason).toMatch(/signature/i);
 });
+
+test('dispense marks dispensed and writes an audit log', async () => {
+  const created = await createRx();
+  const ptoken = await pharmacistToken();
+  const res = await request(app)
+    .post(`/api/prescriptions/${created.prescription.id}/dispense`)
+    .set('Authorization', `Bearer ${ptoken}`);
+  expect(res.status).toBe(200);
+  const audit = await pool.query("SELECT action FROM audit_logs WHERE prescription_id = $1 AND action = 'dispensed'", [created.prescription.id]);
+  expect(audit.rows).toHaveLength(1);
+});
+
+test('concurrent dispense yields exactly one success and one 409', async () => {
+  const created = await createRx();
+  const ptoken = await pharmacistToken();
+  const url = `/api/prescriptions/${created.prescription.id}/dispense`;
+  const [a, b] = await Promise.all([
+    request(app).post(url).set('Authorization', `Bearer ${ptoken}`),
+    request(app).post(url).set('Authorization', `Bearer ${ptoken}`),
+  ]);
+  const codes = [a.status, b.status].sort();
+  expect(codes).toEqual([200, 409]);
+  const audit = await pool.query("SELECT id FROM audit_logs WHERE prescription_id = $1 AND action = 'dispensed'", [created.prescription.id]);
+  expect(audit.rows).toHaveLength(1);
+});
+
+test('rejects valid_until more than 365 days out', async () => {
+  const farFuture = new Date(Date.now() + 400 * 24 * 3600 * 1000).toISOString();
+  const res = await request(app)
+    .post('/api/prescriptions')
+    .set('Authorization', `Bearer ${token}`)
+    .send(rxBody({ valid_until: farFuture }));
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/365 days/);
+});

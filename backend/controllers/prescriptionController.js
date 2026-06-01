@@ -40,6 +40,12 @@ async function createPrescription(req, res) {
     return res.status(400).json({ error: 'valid_until must be a future date' });
   }
 
+  const maxValid = new Date();
+  maxValid.setFullYear(maxValid.getFullYear() + 1);
+  if (validUntilDate > maxValid) {
+    return res.status(400).json({ error: 'valid_until cannot be more than 365 days in the future' });
+  }
+
   try {
     const id = uuidv4();
 
@@ -185,15 +191,17 @@ async function dispensePrescription(req, res) {
   const pharmacist_id = req.user.id;
 
   try {
-    const rxResult = await pool.query(
-      "SELECT * FROM prescriptions WHERE id = $1",
+    const upd = await pool.query(
+      `UPDATE prescriptions SET status = 'dispensed'
+       WHERE id = $1 AND status = 'active' AND valid_until > NOW()
+       RETURNING id`,
       [id]
     );
-    const rx = rxResult.rows[0];
 
-    if (!rx) return res.status(404).json({ error: 'Prescription not found' });
-    if (rx.status === 'dispensed') return res.status(409).json({ error: 'Already dispensed' });
-    if (rx.status === 'expired' || new Date(rx.valid_until) < new Date()) {
+    if (upd.rowCount === 0) {
+      const cur = await pool.query('SELECT status FROM prescriptions WHERE id = $1', [id]);
+      if (!cur.rows[0]) return res.status(404).json({ error: 'Prescription not found' });
+      if (cur.rows[0].status === 'dispensed') return res.status(409).json({ error: 'Already dispensed' });
       return res.status(409).json({ error: 'Prescription is expired' });
     }
 
@@ -202,8 +210,6 @@ async function dispensePrescription(req, res) {
       [pharmacist_id]
     );
     const pharmacy_name = pharmResult.rows[0]?.pharmacy_name || 'Unknown Pharmacy';
-
-    await pool.query("UPDATE prescriptions SET status = 'dispensed' WHERE id = $1", [id]);
 
     await pool.query(
       `INSERT INTO audit_logs (prescription_id, pharmacist_id, pharmacy_name, action)
