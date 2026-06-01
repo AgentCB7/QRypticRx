@@ -70,9 +70,6 @@ export default function DoctorDashboard() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                   <StatusBadge status={rx.status} />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                    Valid until {new Date(rx.valid_until).toLocaleDateString()}
-                  </span>
                   <span style={{ color: 'var(--color-accent)', fontWeight: 600, fontSize: '0.9rem' }}>View →</span>
                 </div>
               </div>

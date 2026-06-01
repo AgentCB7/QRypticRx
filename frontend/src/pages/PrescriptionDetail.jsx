@@ -79,6 +79,8 @@ export default function PrescriptionDetail() {
 
   const statusColors = { active: 'badge-active', dispensed: 'badge-dispensed', expired: 'badge-expired' };
 
+  const durationDays = Math.max(1, Math.round((new Date(rx.valid_until) - new Date(rx.created_at)) / 86400000));
+
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
@@ -112,8 +114,8 @@ export default function PrescriptionDetail() {
             <Field label="Medication" value={rx.medication} />
             <Field label="Dosage" value={rx.dosage} />
             <Field label="Prescribing Doctor" value={rx.doctor_name} />
-            <Field label="Valid Until" value={new Date(rx.valid_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />
             <Field label="Date Issued" value={new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />
+            <Field label="Duration" value={`${durationDays} ${durationDays === 1 ? 'day' : 'days'}`} />
           </div>
 
           <div style={{ marginBottom: '1rem' }}>

@@ -11,7 +11,6 @@ function RxDetails({ rx }) {
     ['Medication', rx.medication],
     ['Dosage', rx.dosage],
     ['Prescribing Doctor', rx.doctor_name],
-    ['Valid Until', new Date(rx.valid_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })],
     ['Date Issued', new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })],
   ];
 
