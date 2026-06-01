@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../api/auth';
-import { useAuth, redirectFor } from '../components/AuthContext';
 
 export default function LoginPage() {
-  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname;
@@ -18,15 +16,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const { token, user } = await authApi.login(form);
-      login(user, token);
-      if (from && !from.includes('/login')) {
-        navigate(from, { replace: true });
-      } else {
-        navigate(redirectFor(user.role), { replace: true });
+      const res = await authApi.login(form);
+      if (res.otpRequired) {
+        navigate('/login/verify', { state: { email: res.email, from } });
+        return;
       }
     } catch (err) {
-      if (err.status === 'pending') {
+      if (err.status === 'unverified') {
+        navigate('/verify-email', { state: { email: form.email } });
+        return;
+      } else if (err.status === 'pending') {
         setError('Your account is awaiting admin approval.');
       } else if (err.status === 'rejected') {
         setError(err.reason

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
+import LoginVerifyPage from './pages/LoginVerifyPage';
 import RegisterPage from './pages/RegisterPage';
 import DoctorDashboard from './pages/DoctorDashboard';
 import NewPrescription from './pages/NewPrescription';
@@ -12,6 +13,7 @@ import PharmacistDashboard from './pages/PharmacistDashboard';
 import ScanVerify from './pages/ScanVerify';
 import LandingPage from './pages/LandingPage';
 import RegisterSubmittedPage from './pages/RegisterSubmittedPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ApplicationDetail from './pages/ApplicationDetail';
 
@@ -31,8 +33,10 @@ export default function App() {
           <Routes>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/login/verify" element={<LoginVerifyPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/register/submitted" element={<RegisterSubmittedPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/about" element={<LandingPage />} />
 
             <Route path="/doctor" element={

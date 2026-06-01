@@ -3,7 +3,7 @@ const { generateKeyPairSync } = require('crypto');
 const { encryptPrivateKey } = require('../lib/keyVault');
 
 async function truncateAll(pool) {
-  await pool.query('TRUNCATE users, prescriptions, audit_logs RESTART IDENTITY CASCADE');
+  await pool.query('TRUNCATE users, prescriptions, audit_logs, otp_codes RESTART IDENTITY CASCADE');
 }
 
 async function insertUser(pool, overrides = {}) {

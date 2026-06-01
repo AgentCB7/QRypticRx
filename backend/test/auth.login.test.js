@@ -6,11 +6,12 @@ const { truncateAll, insertUser } = require('./helpers');
 beforeEach(() => truncateAll(pool));
 afterAll(() => pool.end());
 
-test('approved user + correct password → 200 with JWT', async () => {
+test('approved user + correct password → 200 otpRequired, no token', async () => {
   const u = await insertUser(pool, { email: 'ok@example.com', status: 'approved' });
   const res = await request(app).post('/api/auth/login').send({ email: u.email, password: u.plainPassword });
   expect(res.status).toBe(200);
-  expect(res.body.token).toBeDefined();
+  expect(res.body.otpRequired).toBe(true);
+  expect(res.body.token).toBeUndefined();
 });
 
 test('pending user + correct password → 403 status:pending', async () => {

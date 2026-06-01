@@ -56,7 +56,7 @@ export default function RegisterPage() {
         ...(form.role === 'pharmacist' && { pharmacy_name: form.pharmacy_name }),
       };
       await authApi.register(payload);
-      navigate('/register/submitted', { replace: true });
+      navigate('/verify-email', { state: { email: form.email } });
     } catch (err) {
       setError(err.message);
     } finally {

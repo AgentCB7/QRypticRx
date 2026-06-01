@@ -2,8 +2,9 @@ const request = require('supertest');
 const app = require('../app');
 const pool = require('../db/pool');
 const { truncateAll } = require('./helpers');
+const { outbox } = require('../lib/mailer');
 
-beforeEach(() => truncateAll(pool));
+beforeEach(async () => { await truncateAll(pool); outbox.length = 0; });
 afterAll(() => pool.end());
 
 function base(overrides = {}) {
@@ -14,25 +15,29 @@ function base(overrides = {}) {
   };
 }
 
-test('doctor registration: 202, pending, no token, no keypair', async () => {
+test('doctor registration: 202, unverified, no token, code emailed, no keypair', async () => {
   const res = await request(app).post('/api/auth/register').send(base());
   expect(res.status).toBe(202);
   expect(res.body.token).toBeUndefined();
-  expect(res.body.message).toMatch(/admin/i);
+  expect(res.body.email).toBe('jane@example.com');
 
   const row = await pool.query('SELECT status, public_key FROM users WHERE email = $1', ['jane@example.com']);
-  expect(row.rows[0].status).toBe('pending');
+  expect(row.rows[0].status).toBe('unverified');
   expect(row.rows[0].public_key).toBeNull();
+
+  expect(outbox).toHaveLength(1);
+  expect(outbox[0].to).toBe('jane@example.com');
+  expect(outbox[0].text).toMatch(/\d{6}/);
 });
 
-test('pharmacist registration: 202, pending, no token', async () => {
+test('pharmacist registration: 202, unverified, no token', async () => {
   const res = await request(app).post('/api/auth/register').send(base({
     role: 'pharmacist', email: 'phil@example.com', pharmacy_name: 'City Pharmacy', affiliation: undefined,
   }));
   expect(res.status).toBe(202);
   expect(res.body.token).toBeUndefined();
   const row = await pool.query('SELECT status FROM users WHERE email = $1', ['phil@example.com']);
-  expect(row.rows[0].status).toBe('pending');
+  expect(row.rows[0].status).toBe('unverified');
 });
 
 test('role=admin in body is rejected with 400', async () => {
