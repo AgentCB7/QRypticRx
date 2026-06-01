@@ -49,6 +49,9 @@ export default function PrescriptionDetail() {
           .field-label { font-size: 0.75rem; font-weight: 700; color: #5d6d7e; text-transform: uppercase; letter-spacing: 0.05em; }
           .field-value { font-size: 0.97rem; margin-top: 0.15rem; }
           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+          table.rx-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 0.5rem; }
+          table.rx-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 2px solid #1a5276; }
+          table.rx-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #dce3ec; }
           .qr-section { text-align: center; margin-top: 1.5rem; }
           canvas { border: 1px solid #dce3ec; border-radius: 6px; }
           .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dce3ec; font-size: 0.78rem; color: #5d6d7e; text-align: center; }
@@ -79,7 +82,7 @@ export default function PrescriptionDetail() {
 
   const statusColors = { active: 'badge-active', dispensed: 'badge-dispensed', expired: 'badge-expired' };
 
-  const durationDays = Math.max(1, Math.round((new Date(rx.valid_until) - new Date(rx.created_at)) / 86400000));
+  const medicines = rx.items || [];
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -111,20 +114,42 @@ export default function PrescriptionDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem 1.5rem', marginBottom: '1.25rem' }}>
             <Field label="Patient Name" value={rx.patient_name} />
             <Field label="Patient IC / ID" value={rx.patient_ic} />
-            <Field label="Medication" value={rx.medication} />
-            <Field label="Dosage" value={rx.dosage} />
             <Field label="Prescribing Doctor" value={rx.doctor_name} />
             <Field label="Date Issued" value={new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />
-            <Field label="Duration" value={`${durationDays} ${durationDays === 1 ? 'day' : 'days'}`} />
+            <Field label="Valid Until" value={new Date(rx.valid_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-              Instructions
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+              Medicines
             </div>
-            <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              {rx.instructions}
-            </div>
+            <table className="rx-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', borderBottom: '2px solid var(--color-border)' }}>Medicine</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', borderBottom: '2px solid var(--color-border)' }}>Dosage</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem 0.6rem', borderBottom: '2px solid var(--color-border)' }}>Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map(m => (
+                  <React.Fragment key={m.id}>
+                    <tr>
+                      <td style={{ padding: '0.5rem 0.6rem', borderBottom: '1px solid var(--color-border)' }}>{m.medication}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', borderBottom: '1px solid var(--color-border)' }}>{m.dosage}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', borderBottom: '1px solid var(--color-border)' }}>{m.duration_days} {m.duration_days === 1 ? 'day' : 'days'}</td>
+                    </tr>
+                    {m.notes && (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '0.1rem 0.6rem 0.5rem', borderBottom: '1px solid var(--color-border)', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                          ↳ {m.notes}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '1.5rem', flexWrap: 'wrap' }}>

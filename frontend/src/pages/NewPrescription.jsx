@@ -12,6 +12,8 @@ const TIME_SLOTS = [
 const DOSE_MAX = 4;
 const DURATION_MIN = 1;
 const DURATION_MAX = 365;
+const VALID_MIN = 1;
+const VALID_MAX = 365;
 const AMOUNT_MIN = 1;
 const AMOUNT_MAX = { mL: 30, drops: 20 };
 
@@ -96,13 +98,8 @@ function Counter({ value, min, max, onChange, suffix, ariaLabel }) {
   );
 }
 
-export default function NewPrescription() {
-  const { token } = useAuth();
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    patient_name: '',
-    patient_ic: '',
+function newMedicine() {
+  return {
     medication: '',
     type: 'tablet',
     morning: 0,
@@ -112,55 +109,196 @@ export default function NewPrescription() {
     unit: 'mL',
     duration_days: 7,
     notes: '',
-  });
+  };
+}
+
+function buildDosage(m) {
+  const freq = `${m.morning}+${m.afternoon}+${m.night}`;
+  if (m.type === 'liquid') {
+    return `${freq} × ${m.amount}${m.unit} liquid`;
+  }
+  return `${freq} tablet`;
+}
+
+function MedicineRow({ med, index, onChange, onSetType, onSetUnit, onRemove, canRemove }) {
+  const isLiquid = med.type === 'liquid';
+  return (
+    <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Medicine {index + 1}
+        </span>
+        {canRemove && (
+          <button type="button" onClick={() => onRemove(index)} className="btn btn-secondary btn-sm" aria-label={`Remove medicine ${index + 1}`}>
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`medication-${index}`}>Medication Name</label>
+        <input
+          id={`medication-${index}`}
+          type="text"
+          required
+          value={med.medication}
+          onChange={e => onChange(index, 'medication', e.target.value)}
+          placeholder="e.g. Amoxicillin 500mg"
+        />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Type</span>
+        <PillToggle
+          ariaLabel={`Medicine ${index + 1} type`}
+          value={med.type}
+          onChange={t => onSetType(index, t)}
+          options={[
+            { value: 'tablet', label: 'Tablet' },
+            { value: 'liquid', label: 'Liquid' },
+          ]}
+        />
+      </div>
+
+      <div>
+        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>Dosage</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
+          {TIME_SLOTS.map(slot => (
+            <div key={slot.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>{slot.label}</span>
+              <Counter
+                ariaLabel={`Medicine ${index + 1} ${slot.label} doses`}
+                value={med[slot.key]}
+                min={0}
+                max={DOSE_MAX}
+                onChange={v => onChange(index, slot.key, v)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        aria-hidden={!isLiquid}
+        style={{
+          overflow: 'hidden',
+          opacity: isLiquid ? 1 : 0,
+          maxHeight: isLiquid ? 120 : 0,
+          pointerEvents: isLiquid ? 'auto' : 'none',
+          transition: 'opacity 150ms ease, max-height 150ms ease',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Amount per dose</span>
+            <Counter
+              ariaLabel={`Medicine ${index + 1} amount per dose`}
+              value={med.amount}
+              min={AMOUNT_MIN}
+              max={AMOUNT_MAX[med.unit]}
+              onChange={v => onChange(index, 'amount', v)}
+              suffix={med.unit}
+            />
+          </div>
+          <PillToggle
+            ariaLabel={`Medicine ${index + 1} liquid unit`}
+            value={med.unit}
+            onChange={u => onSetUnit(index, u)}
+            options={[
+              { value: 'mL', label: 'mL' },
+              { value: 'drops', label: 'drops' },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>Duration</div>
+        <Counter
+          ariaLabel={`Medicine ${index + 1} duration in days`}
+          value={med.duration_days}
+          min={DURATION_MIN}
+          max={DURATION_MAX}
+          onChange={v => onChange(index, 'duration_days', v)}
+          suffix="days"
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`notes-${index}`}>Notes</label>
+        <textarea
+          id={`notes-${index}`}
+          value={med.notes}
+          onChange={e => onChange(index, 'notes', e.target.value)}
+          placeholder="Notes for this medicine…"
+          rows={2}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function NewPrescription() {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+
+  const [patient, setPatient] = useState({ patient_name: '', patient_ic: '' });
+  const [validDays, setValidDays] = useState(30);
+  const [medicines, setMedicines] = useState([newMedicine()]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function set(field) {
-    return e => setForm(f => ({ ...f, [field]: e.target.value }));
-  }
-  function setField(field, value) {
-    setForm(f => ({ ...f, [field]: value }));
+  function setPatientField(field) {
+    return e => setPatient(p => ({ ...p, [field]: e.target.value }));
   }
 
-  function setType(type) {
-    // Switching type resets liquid-only fields but preserves dose counts.
-    setForm(f => ({ ...f, type, amount: 5, unit: 'mL' }));
+  function updateMedicine(index, field, value) {
+    setMedicines(list => list.map((m, i) => (i === index ? { ...m, [field]: value } : m)));
   }
-  function setUnit(unit) {
-    // Switching unit resets amount to its minimum and updates the counter max.
-    setForm(f => ({ ...f, unit, amount: AMOUNT_MIN }));
+  function setMedicineType(index, type) {
+    setMedicines(list => list.map((m, i) => (i === index ? { ...m, type, amount: 5, unit: 'mL' } : m)));
   }
-
-  function buildDosage(f) {
-    const freq = `${f.morning}+${f.afternoon}+${f.night}`;
-    if (f.type === 'liquid') {
-      return `${freq} × ${f.amount}${f.unit} liquid`;
-    }
-    return `${freq} tablet`;
+  function setMedicineUnit(index, unit) {
+    setMedicines(list => list.map((m, i) => (i === index ? { ...m, unit, amount: AMOUNT_MIN } : m)));
+  }
+  function addMedicine() {
+    setMedicines(list => [...list, newMedicine()]);
+  }
+  function removeMedicine(index) {
+    setMedicines(list => list.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
-    if (form.morning + form.afternoon + form.night === 0) {
-      setError('Set at least one dose (morning, afternoon, or night).');
-      return;
+    for (let i = 0; i < medicines.length; i++) {
+      const m = medicines[i];
+      if (!m.medication.trim()) {
+        setError(`Medicine ${i + 1}: enter a medication name.`);
+        return;
+      }
+      if (m.morning + m.afternoon + m.night === 0) {
+        setError(`Medicine ${i + 1}: set at least one dose (morning, afternoon, or night).`);
+        return;
+      }
     }
 
     const validUntil = new Date();
-    validUntil.setDate(validUntil.getDate() + form.duration_days);
+    validUntil.setDate(validUntil.getDate() + validDays);
 
     setLoading(true);
     try {
       const { prescription } = await prescriptionApi.create({
-        patient_name: form.patient_name,
-        patient_ic: form.patient_ic,
-        medication: form.medication,
-        dosage: buildDosage(form),
-        instructions: form.notes,
+        patient_name: patient.patient_name,
+        patient_ic: patient.patient_ic,
         valid_until: validUntil.toISOString(),
+        medicines: medicines.map(m => ({
+          medication: m.medication,
+          dosage: buildDosage(m),
+          duration_days: m.duration_days,
+          notes: m.notes,
+        })),
       }, token);
       navigate(`/doctor/prescription/${prescription.id}`);
     } catch (err) {
@@ -169,8 +307,6 @@ export default function NewPrescription() {
       setLoading(false);
     }
   }
-
-  const isLiquid = form.type === 'liquid';
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -194,11 +330,11 @@ export default function NewPrescription() {
             <div className="form-grid">
               <div className="form-group">
                 <label htmlFor="patient_name">Patient Name</label>
-                <input id="patient_name" type="text" required value={form.patient_name} onChange={set('patient_name')} placeholder="Full legal name" />
+                <input id="patient_name" type="text" required value={patient.patient_name} onChange={setPatientField('patient_name')} placeholder="Full legal name" />
               </div>
               <div className="form-group">
                 <label htmlFor="patient_ic">Patient IC / ID</label>
-                <input id="patient_ic" type="text" required value={form.patient_ic} onChange={set('patient_ic')} placeholder="IC or passport number" />
+                <input id="patient_ic" type="text" required value={patient.patient_ic} onChange={setPatientField('patient_ic')} placeholder="IC or passport number" />
               </div>
             </div>
           </fieldset>
@@ -207,108 +343,42 @@ export default function NewPrescription() {
 
           <fieldset style={{ border: 'none', padding: 0 }}>
             <legend style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
-              Medication
+              Medicines
             </legend>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
-              <div className="form-group">
-                <label htmlFor="medication">Medication Name</label>
-                <input id="medication" type="text" required value={form.medication} onChange={set('medication')} placeholder="e.g. Amoxicillin 500mg" />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Type</span>
-                <PillToggle
-                  ariaLabel="Medication type"
-                  value={form.type}
-                  onChange={setType}
-                  options={[
-                    { value: 'tablet', label: 'Tablet' },
-                    { value: 'liquid', label: 'Liquid' },
-                  ]}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {medicines.map((med, index) => (
+                <MedicineRow
+                  key={index}
+                  med={med}
+                  index={index}
+                  onChange={updateMedicine}
+                  onSetType={setMedicineType}
+                  onSetUnit={setMedicineUnit}
+                  onRemove={removeMedicine}
+                  canRemove={medicines.length > 1}
                 />
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>
-                  Dosage
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
-                  {TIME_SLOTS.map(slot => (
-                    <div key={slot.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>{slot.label}</span>
-                      <Counter
-                        ariaLabel={`${slot.label} doses`}
-                        value={form[slot.key]}
-                        min={0}
-                        max={DOSE_MAX}
-                        onChange={v => setField(slot.key, v)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Liquid-only section — fades in/out via opacity + max-height transition */}
-              <div
-                aria-hidden={!isLiquid}
-                style={{
-                  overflow: 'hidden',
-                  opacity: isLiquid ? 1 : 0,
-                  maxHeight: isLiquid ? 120 : 0,
-                  pointerEvents: isLiquid ? 'auto' : 'none',
-                  transition: 'opacity 150ms ease, max-height 150ms ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Amount per dose</span>
-                    <Counter
-                      ariaLabel="Amount per dose"
-                      value={form.amount}
-                      min={AMOUNT_MIN}
-                      max={AMOUNT_MAX[form.unit]}
-                      onChange={v => setField('amount', v)}
-                      suffix={form.unit}
-                    />
-                  </div>
-                  <PillToggle
-                    ariaLabel="Liquid unit"
-                    value={form.unit}
-                    onChange={setUnit}
-                    options={[
-                      { value: 'mL', label: 'mL' },
-                      { value: 'drops', label: 'drops' },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>
-                  Duration
-                </div>
-                <Counter
-                  ariaLabel="Duration in days"
-                  value={form.duration_days}
-                  min={DURATION_MIN}
-                  max={DURATION_MAX}
-                  onChange={v => setField('duration_days', v)}
-                  suffix="days"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="notes">Notes</label>
-                <textarea
-                  id="notes"
-                  value={form.notes}
-                  onChange={set('notes')}
-                  placeholder="Additional notes for the patient…"
-                  rows={3}
-                />
-              </div>
+              ))}
+              <button type="button" onClick={addMedicine} className="btn btn-secondary" style={{ alignSelf: 'flex-start' }}>
+                + Add medicine
+              </button>
             </div>
           </fieldset>
+
+          <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
+
+          <div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>
+              Prescription valid for
+            </div>
+            <Counter
+              ariaLabel="Prescription validity in days"
+              value={validDays}
+              min={VALID_MIN}
+              max={VALID_MAX}
+              onChange={setValidDays}
+              suffix="days"
+            />
+          </div>
 
           <div style={{ display: 'flex', gap: '0.85rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1, padding: '0.75rem' }}>

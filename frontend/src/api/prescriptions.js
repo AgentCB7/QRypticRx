@@ -5,5 +5,5 @@ export const prescriptionApi = {
   list: (token) => api.get('/api/prescriptions', token),
   get: (id, token) => api.get(`/api/prescriptions/${id}`, token),
   verify: (data, token) => api.post('/api/prescriptions/verify', data, token),
-  dispense: (id, token) => api.post(`/api/prescriptions/${id}/dispense`, {}, token),
+  dispenseItem: (id, itemId, token) => api.post(`/api/prescriptions/${id}/items/${itemId}/dispense`, {}, token),
 };

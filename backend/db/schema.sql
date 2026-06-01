@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   doctor_id UUID NOT NULL REFERENCES users(id),
   patient_name VARCHAR(255) NOT NULL,
   patient_ic VARCHAR(100) NOT NULL,
-  medication VARCHAR(255) NOT NULL,
-  dosage VARCHAR(255) NOT NULL,
+  medication VARCHAR(255),
+  dosage VARCHAR(255),
   instructions TEXT,
   valid_until TIMESTAMPTZ NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'dispensed', 'expired')),
@@ -34,9 +34,26 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS prescription_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prescription_id UUID NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
+  position INT NOT NULL,
+  medication VARCHAR(255) NOT NULL,
+  dosage VARCHAR(255) NOT NULL,
+  duration_days INT NOT NULL,
+  notes TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'dispensed')),
+  dispensed_at TIMESTAMPTZ,
+  dispensed_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (prescription_id, position)
+);
+CREATE INDEX IF NOT EXISTS idx_prescription_items_prescription_id ON prescription_items(prescription_id);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prescription_id UUID REFERENCES prescriptions(id),
+  item_id UUID,
   pharmacist_id UUID NOT NULL REFERENCES users(id),
   pharmacy_name VARCHAR(255) NOT NULL,
   action VARCHAR(100) NOT NULL,

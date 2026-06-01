@@ -65,7 +65,9 @@ export default function DoctorDashboard() {
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>{rx.patient_name}</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                    {rx.medication} — {rx.dosage}
+                    {(rx.items && rx.items.length)
+                      ? `${rx.items[0].medication}${rx.items.length > 1 ? ` +${rx.items.length - 1} more` : ''}`
+                      : '—'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>

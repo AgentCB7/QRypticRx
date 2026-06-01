@@ -4,15 +4,14 @@ import jsQR from 'jsqr';
 import { prescriptionApi } from '../api/prescriptions';
 import { useAuth } from '../components/AuthContext';
 
-function RxDetails({ rx }) {
+function RxDetails({ rx, onDispenseItem, dispensingId, disabled }) {
   const fields = [
     ['Patient Name', rx.patient_name],
     ['Patient IC / ID', rx.patient_ic],
-    ['Medication', rx.medication],
-    ['Dosage', rx.dosage],
     ['Prescribing Doctor', rx.doctor_name],
     ['Date Issued', new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })],
   ];
+  const medicines = rx.medicines || [];
 
   return (
     <div>
@@ -28,11 +27,46 @@ function RxDetails({ rx }) {
       </div>
       <div>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-          Instructions
+          Medicines
         </div>
-        <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '0.65rem', fontSize: '0.92rem', lineHeight: 1.55 }}>
-          {rx.instructions}
-        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '2px solid var(--color-border)' }}>Medicine</th>
+              <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '2px solid var(--color-border)' }}>Dosage</th>
+              <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', borderBottom: '2px solid var(--color-border)' }}>Duration</th>
+              {onDispenseItem && <th style={{ padding: '0.4rem 0.5rem', borderBottom: '2px solid var(--color-border)' }} />}
+            </tr>
+          </thead>
+          <tbody>
+            {medicines.map(m => (
+              <tr key={m.id}>
+                <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid var(--color-border)' }}>
+                  {m.medication}
+                  {m.notes ? <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>↳ {m.notes}</div> : null}
+                </td>
+                <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid var(--color-border)' }}>{m.dosage}</td>
+                <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid var(--color-border)' }}>{m.duration_days} {m.duration_days === 1 ? 'day' : 'days'}</td>
+                {onDispenseItem && (
+                  <td style={{ padding: '0.4rem 0.5rem', borderBottom: '1px solid var(--color-border)', textAlign: 'right' }}>
+                    {m.status === 'dispensed' ? (
+                      <span className="badge badge-dispensed">dispensed</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        disabled={disabled || dispensingId === m.id}
+                        onClick={() => onDispenseItem(m.id)}
+                      >
+                        {dispensingId === m.id ? 'Recording…' : 'Dispense'}
+                      </button>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -44,7 +78,7 @@ export default function ScanVerify() {
   const [verifyResult, setVerifyResult] = useState(null);
   const [error, setError] = useState('');
   const [dispensing, setDispensing] = useState(false);
-  const [dispensed, setDispensed] = useState(false);
+  const [dispensingId, setDispensingId] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -103,7 +137,6 @@ export default function ScanVerify() {
   async function startCamera() {
     setError('');
     setVerifyResult(null);
-    setDispensed(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       streamRef.current = stream;
@@ -141,18 +174,27 @@ export default function ScanVerify() {
     e.target.value = '';
   }
 
-  async function handleDispense() {
+  async function handleDispenseItem(itemId) {
     if (!verifyResult?.prescription) return;
     setDispensing(true);
+    setDispensingId(itemId);
     setError('');
     try {
-      await prescriptionApi.dispense(verifyResult.prescription.id, token);
-      setDispensed(true);
-      setMode('dispensed');
+      const result = await prescriptionApi.dispenseItem(verifyResult.prescription.id, itemId, token);
+      setVerifyResult(prev => {
+        const medicines = prev.prescription.medicines.map(m =>
+          m.id === itemId ? { ...m, status: 'dispensed' } : m
+        );
+        return { ...prev, prescription: { ...prev.prescription, medicines } };
+      });
+      if (result.prescription_status === 'dispensed') {
+        setMode('dispensed');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setDispensing(false);
+      setDispensingId(null);
     }
   }
 
@@ -161,7 +203,7 @@ export default function ScanVerify() {
     setMode('idle');
     setVerifyResult(null);
     setError('');
-    setDispensed(false);
+    setDispensingId(null);
   }
 
   return (
@@ -261,25 +303,22 @@ export default function ScanVerify() {
                   <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Digital signature and hash verified — authentic, signed by the prescribing doctor, and unmodified</div>
                 </div>
               </div>
-              <RxDetails rx={verifyResult.prescription} />
-              {!dispensed && (
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '0.75rem' }}>
-                  <button
-                    onClick={handleDispense}
-                    disabled={dispensing}
-                    className="btn btn-success"
-                    style={{ flex: 1, padding: '0.75rem' }}
-                  >
-                    {dispensing ? 'Recording…' : '✓ Confirm Dispensing'}
-                  </button>
-                  <button onClick={reset} className="btn btn-secondary">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              {dispensed && (
+              <RxDetails
+                rx={verifyResult.prescription}
+                onDispenseItem={handleDispenseItem}
+                dispensingId={dispensingId}
+                disabled={dispensing}
+              />
+              {(verifyResult.prescription.medicines || []).every(m => m.status === 'dispensed') ? (
                 <div style={{ marginTop: '1.25rem' }}>
+                  <div className="alert alert-success" style={{ marginBottom: '1rem', fontWeight: 600 }}>
+                    ✅ All medicines dispensed. Audit logs recorded.
+                  </div>
                   <button onClick={reset} className="btn btn-primary">Scan Another</button>
+                </div>
+              ) : (
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
+                  <button onClick={reset} className="btn btn-secondary">Cancel</button>
                 </div>
               )}
             </div>

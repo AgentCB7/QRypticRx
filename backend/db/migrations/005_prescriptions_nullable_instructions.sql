@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE prescriptions ALTER COLUMN instructions DROP NOT NULL;
+
+COMMIT;

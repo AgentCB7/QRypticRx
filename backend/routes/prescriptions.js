@@ -6,18 +6,15 @@ const {
   listPrescriptions,
   getPrescription,
   verifyPrescription,
-  dispensePrescription,
+  dispenseItem,
 } = require('../controllers/prescriptionController');
 
-// Pharmacist: verify (must be registered before /:id to avoid param capture)
 router.post('/verify', authenticate, requireRole('pharmacist'), verifyPrescription);
 
-// Doctor routes
 router.post('/', authenticate, requireRole('doctor'), createPrescription);
 router.get('/', authenticate, requireRole('doctor'), listPrescriptions);
 router.get('/:id', authenticate, requireRole('doctor'), getPrescription);
 
-// Pharmacist: dispense
-router.post('/:id/dispense', authenticate, requireRole('pharmacist'), dispensePrescription);
+router.post('/:id/items/:itemId/dispense', authenticate, requireRole('pharmacist'), dispenseItem);
 
 module.exports = router;
