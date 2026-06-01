@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../api/auth';
-import { useAuth } from '../components/AuthContext';
+import { useAuth, redirectFor } from '../components/AuthContext';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -23,10 +23,18 @@ export default function LoginPage() {
       if (from && !from.includes('/login')) {
         navigate(from, { replace: true });
       } else {
-        navigate(user.role === 'doctor' ? '/doctor' : '/pharmacist', { replace: true });
+        navigate(redirectFor(user.role), { replace: true });
       }
     } catch (err) {
-      setError(err.message);
+      if (err.status === 'pending') {
+        setError('Your account is awaiting admin approval.');
+      } else if (err.status === 'rejected') {
+        setError(err.reason
+          ? `Your application was denied: ${err.reason}`
+          : 'Your application was denied.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

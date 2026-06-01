@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
-import { useAuth } from '../components/AuthContext';
 
 export default function RegisterPage() {
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -14,6 +12,9 @@ export default function RegisterPage() {
     confirmPassword: '',
     role: 'doctor',
     pharmacy_name: '',
+    license_number: '',
+    affiliation: '',
+    applicant_note: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,12 @@ export default function RegisterPage() {
     if (form.password.length < 8) {
       return setError('Password must be at least 8 characters');
     }
+    if (!form.license_number.trim()) {
+      return setError('License number is required');
+    }
+    if (form.role === 'doctor' && !form.affiliation.trim()) {
+      return setError('Affiliation is required for doctors');
+    }
     if (form.role === 'pharmacist' && !form.pharmacy_name.trim()) {
       return setError('Pharmacy name is required for pharmacists');
     }
@@ -43,11 +50,13 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         role: form.role,
+        license_number: form.license_number,
+        applicant_note: form.applicant_note || undefined,
+        ...(form.role === 'doctor' && { affiliation: form.affiliation }),
         ...(form.role === 'pharmacist' && { pharmacy_name: form.pharmacy_name }),
       };
-      const { token, user } = await authApi.register(payload);
-      login(user, token);
-      navigate(user.role === 'doctor' ? '/doctor' : '/pharmacist', { replace: true });
+      await authApi.register(payload);
+      navigate('/register/submitted', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -86,6 +95,32 @@ export default function RegisterPage() {
             </select>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="license_number">License Number</label>
+            <input
+              id="license_number"
+              type="text"
+              required
+              value={form.license_number}
+              onChange={set('license_number')}
+              placeholder="e.g. MMC-123456"
+            />
+          </div>
+
+          {form.role === 'doctor' && (
+            <div className="form-group">
+              <label htmlFor="affiliation">Clinic / Hospital Affiliation</label>
+              <input
+                id="affiliation"
+                type="text"
+                required
+                value={form.affiliation}
+                onChange={set('affiliation')}
+                placeholder="e.g. City General Hospital"
+              />
+            </div>
+          )}
+
           {form.role === 'pharmacist' && (
             <div className="form-group">
               <label htmlFor="pharmacy_name">Pharmacy Name</label>
@@ -99,6 +134,17 @@ export default function RegisterPage() {
               />
             </div>
           )}
+
+          <div className="form-group">
+            <label htmlFor="applicant_note">Note for Reviewer (optional)</label>
+            <textarea
+              id="applicant_note"
+              rows={3}
+              value={form.applicant_note}
+              onChange={set('applicant_note')}
+              placeholder="Anything that helps the admin verify your identity"
+            />
+          </div>
 
           <div className="form-grid">
             <div className="form-group">

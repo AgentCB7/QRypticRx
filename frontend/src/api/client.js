@@ -13,7 +13,11 @@ async function request(method, path, body, token) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || `Request failed: ${res.status}`);
+    const err = new Error(data.error || `Request failed: ${res.status}`);
+    err.httpStatus = res.status;
+    if (data.status) err.status = data.status;
+    if (data.reason) err.reason = data.reason;
+    throw err;
   }
   return data;
 }

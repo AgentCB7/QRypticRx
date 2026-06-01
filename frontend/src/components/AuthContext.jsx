@@ -39,3 +39,9 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
+export function redirectFor(role) {
+  if (role === 'admin') return '/admin';
+  if (role === 'doctor') return '/doctor';
+  return '/pharmacist';
+}

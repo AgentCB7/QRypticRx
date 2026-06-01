@@ -92,6 +92,9 @@ input, select, textarea {
 .badge-active { background: #d5e8fc; color: #1a5276; }
 .badge-dispensed { background: #d5f5e3; color: #1e8449; }
 .badge-expired { background: #fde8e7; color: #922b21; }
+.badge-pending { background: #fef5e7; color: #9c640c; }
+.badge-approved { background: #d5f5e3; color: #1e8449; }
+.badge-rejected { background: #fde8e7; color: #922b21; }
 
 .alert {
   padding: 0.85rem 1rem;
