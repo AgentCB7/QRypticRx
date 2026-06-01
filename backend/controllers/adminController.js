@@ -1,5 +1,6 @@
 const { generateKeyPairSync } = require('crypto');
 const pool = require('../db/pool');
+const { encryptPrivateKey } = require('../lib/keyVault');
 
 const APPLICANT_FIELDS =
   'id, name, email, role, status, pharmacy_name, license_number, affiliation, applicant_note, rejection_reason, reviewed_by, reviewed_at, created_at';
@@ -51,21 +52,25 @@ async function approveApplication(req, res) {
     if (applicant.status === 'approved') return res.status(409).json({ error: 'Already approved' });
 
     let public_key = null;
+    let private_key_enc = null;
     if (applicant.role === 'doctor') {
-      const { publicKey } = generateKeyPairSync('rsa', {
+      const { publicKey, privateKey } = generateKeyPairSync('rsa', {
         modulusLength: 2048,
         publicKeyEncoding: { type: 'spki', format: 'pem' },
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       });
       public_key = publicKey;
+      private_key_enc = encryptPrivateKey(privateKey);
     }
 
     await pool.query(
       `UPDATE users
-       SET status = 'approved', public_key = COALESCE($1, public_key),
-           reviewed_by = $2, reviewed_at = NOW(), rejection_reason = NULL
-       WHERE id = $3`,
-      [public_key, adminId, id]
+       SET status = 'approved',
+           public_key = COALESCE($1, public_key),
+           private_key_enc = COALESCE($2, private_key_enc),
+           reviewed_by = $3, reviewed_at = NOW(), rejection_reason = NULL
+       WHERE id = $4`,
+      [public_key, private_key_enc, adminId, id]
     );
 
     await pool.query(

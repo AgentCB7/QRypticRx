@@ -49,6 +49,17 @@ test('approve doctor → approved, public_key set, reviewer recorded, audit row'
   expect(audit.rows).toHaveLength(1);
 });
 
+test('approve doctor stores an encrypted private key that decrypts to a PEM', async () => {
+  const { decryptPrivateKey } = require('../lib/keyVault');
+  const doc = await insertUser(pool, { email: 'pk@example.com', role: 'doctor', status: 'pending' });
+  await request(app)
+    .post(`/api/admin/applications/${doc.id}/approve`)
+    .set('Authorization', `Bearer ${adminToken}`);
+  const row = await pool.query('SELECT private_key_enc FROM users WHERE id = $1', [doc.id]);
+  expect(row.rows[0].private_key_enc).toMatch(/^[^:]+:[^:]+:[^:]+$/);
+  expect(decryptPrivateKey(row.rows[0].private_key_enc)).toMatch(/BEGIN PRIVATE KEY/);
+});
+
 test('approve pharmacist → approved, public_key stays null', async () => {
   const ph = await insertUser(pool, { email: 'pp@example.com', role: 'pharmacist', status: 'pending', pharmacy_name: 'Rx', affiliation: null });
   const res = await request(app)
