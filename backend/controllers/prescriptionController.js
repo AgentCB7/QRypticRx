@@ -1,17 +1,29 @@
 const { v4: uuidv4 } = require('uuid');
-const { createHash, generateKeyPairSync, createSign } = require('crypto');
+const { createHash, createSign, createVerify } = require('crypto');
 const pool = require('../db/pool');
+const { buildPayload } = require('../lib/payload');
+const { decryptPrivateKey } = require('../lib/keyVault');
 
-function buildPayload(fields) {
-  return JSON.stringify({
-    patient_name: fields.patient_name,
-    patient_ic: fields.patient_ic,
-    medication: fields.medication,
-    dosage: fields.dosage,
-    instructions: fields.instructions,
-    valid_until: fields.valid_until,
-    doctor_id: fields.doctor_id,
-  });
+function maskIc(ic) {
+  if (!ic) return ic;
+  const s = String(ic);
+  const last4 = s.slice(-4);
+  return '*'.repeat(Math.max(0, s.length - 4)) + last4;
+}
+
+function publicView(rx) {
+  return {
+    id: rx.id,
+    patient_name: rx.patient_name,
+    patient_ic: maskIc(rx.patient_ic),
+    medication: rx.medication,
+    dosage: rx.dosage,
+    instructions: rx.instructions,
+    valid_until: rx.valid_until,
+    status: rx.status,
+    doctor_name: rx.doctor_name,
+    created_at: rx.created_at,
+  };
 }
 
 async function createPrescription(req, res) {
@@ -31,14 +43,15 @@ async function createPrescription(req, res) {
   try {
     const id = uuidv4();
 
+    const doctorRow = await pool.query('SELECT private_key_enc FROM users WHERE id = $1', [doctor_id]);
+    const enc = doctorRow.rows[0]?.private_key_enc;
+    if (!enc) {
+      return res.status(409).json({ error: 'Doctor signing key not provisioned' });
+    }
+    const privateKey = decryptPrivateKey(enc);
+
     const payload = buildPayload({ patient_name, patient_ic, medication, dosage, instructions, valid_until, doctor_id });
     const hash = createHash('sha256').update(payload).digest('hex');
-
-    const { privateKey, publicKey } = generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    });
 
     const signer = createSign('SHA256');
     signer.update(payload);
@@ -49,11 +62,6 @@ async function createPrescription(req, res) {
          (id, doctor_id, patient_name, patient_ic, medication, dosage, instructions, valid_until, hash, signature)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [id, doctor_id, patient_name, patient_ic, medication, dosage, instructions, validUntilDate, hash, signature]
-    );
-
-    await pool.query(
-      'UPDATE users SET public_key = $1 WHERE id = $2',
-      [publicKey, doctor_id]
     );
 
     const row = await pool.query(
@@ -114,7 +122,7 @@ async function verifyPrescription(req, res) {
 
   try {
     const result = await pool.query(
-      `SELECT p.*, u.name AS doctor_name
+      `SELECT p.*, u.name AS doctor_name, u.public_key
        FROM prescriptions p JOIN users u ON u.id = p.doctor_id
        WHERE p.id = $1`,
       [id]
@@ -127,7 +135,7 @@ async function verifyPrescription(req, res) {
     const rx = result.rows[0];
 
     if (rx.status === 'dispensed') {
-      return res.status(200).json({ valid: false, reason: 'Prescription has already been dispensed', prescription: rx });
+      return res.status(200).json({ valid: false, reason: 'Prescription has already been dispensed', prescription: publicView(rx) });
     }
 
     if (rx.status === 'expired' || new Date(rx.valid_until) < new Date()) {
@@ -135,14 +143,37 @@ async function verifyPrescription(req, res) {
         await pool.query("UPDATE prescriptions SET status = 'expired' WHERE id = $1", [rx.id]);
         rx.status = 'expired';
       }
-      return res.status(200).json({ valid: false, reason: 'Prescription has expired', prescription: rx });
+      return res.status(200).json({ valid: false, reason: 'Prescription has expired', prescription: publicView(rx) });
     }
 
-    if (rx.hash !== hash) {
+    const payload = buildPayload({
+      patient_name: rx.patient_name,
+      patient_ic: rx.patient_ic,
+      medication: rx.medication,
+      dosage: rx.dosage,
+      instructions: rx.instructions ?? '',
+      valid_until: rx.valid_until,
+      doctor_id: rx.doctor_id,
+    });
+    const computedHash = createHash('sha256').update(payload).digest('hex');
+
+    if (computedHash !== rx.hash || rx.hash !== hash) {
       return res.status(200).json({ valid: false, reason: 'Prescription data has been tampered with' });
     }
 
-    res.json({ valid: true, prescription: rx });
+    const verifier = createVerify('SHA256');
+    verifier.update(payload);
+    let signatureOk = false;
+    try {
+      signatureOk = rx.public_key && verifier.verify(rx.public_key, rx.signature, 'base64');
+    } catch {
+      signatureOk = false;
+    }
+    if (!signatureOk) {
+      return res.status(200).json({ valid: false, reason: 'Signature verification failed' });
+    }
+
+    res.json({ valid: true, prescription: publicView(rx) });
   } catch (err) {
     console.error('Verify error:', err);
     res.status(500).json({ error: 'Verification failed' });
