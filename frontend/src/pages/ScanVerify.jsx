@@ -259,7 +259,7 @@ export default function ScanVerify() {
                 <span style={{ fontSize: '1.3rem' }}>✅</span>
                 <div>
                   <div style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: '1rem' }}>Prescription Valid</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Cryptographic hash verified — data is authentic and unmodified</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Digital signature and hash verified — authentic, signed by the prescribing doctor, and unmodified</div>
                 </div>
               </div>
               <RxDetails rx={verifyResult.prescription} />
@@ -291,6 +291,7 @@ export default function ScanVerify() {
                 <div>
                   <div style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: '1rem' }}>
                     {verifyResult.reason?.includes('tamper') ? 'Tampered Prescription Detected' :
+                     verifyResult.reason?.includes('ignature') ? 'Signature Verification Failed' :
                      verifyResult.reason?.includes('dispensed') ? 'Already Dispensed' :
                      verifyResult.reason?.includes('expired') ? 'Prescription Expired' : 'Prescription Invalid'}
                   </div>
