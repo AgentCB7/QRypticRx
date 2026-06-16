@@ -105,7 +105,7 @@ The backend is a stateless Express API — JWTs carry all session state. The fro
 | `helmet` | ^7.1 | Security headers |
 | `cors` | ^2.8 | CORS middleware |
 | `uuid` | ^10.0 | UUID generation |
-| Jest + Supertest | ^29.7 / ^7.0 | Testing |
+| Jest + Supertest | ^29.7 / ^7.0 | Backend integration testing |
 | nodemon | ^3.1 | Dev hot-reload |
 
 ### Frontend
@@ -119,6 +119,7 @@ The backend is a stateless Express API — JWTs carry all session state. The fro
 | `jspdf` | ^2.5 | PDF export |
 | `html2canvas` | ^1.4 | Element → canvas → PDF |
 | `gh-pages` | ^6.0 | GitHub Pages deployment |
+| `@playwright/test` | ^1.61 | E2E browser testing with screenshots |
 
 ---
 
@@ -180,11 +181,23 @@ QRypticRx/
 │       ├── keyVault.test.js
 │       ├── payload.test.js
 │       ├── ratelimit.test.js
-│       └── seedAdmin.test.js
+│       ├── seedAdmin.test.js
+│       ├── middleware.test.js        # Unit tests for authenticate + requireRole
+│       ├── app.test.js              # /health, 404, role guard
+│       ├── prescriptions.access.test.js  # Role isolation + ownership checks
+│       └── auth.edgecases.test.js   # Edge cases: past valid_until, re-dispense, etc.
 │
 └── frontend/
     ├── vite.config.js
+    ├── playwright.config.js          # Playwright E2E config (starts both servers)
     ├── index.html
+    ├── e2e/
+    │   ├── global-setup.js           # Seeds test users + admin approval before tests
+    │   ├── helpers.js                # Shared test accounts + uiLogin utility
+    │   ├── admin.spec.js             # Admin login → approve pending doctor
+    │   ├── doctor.spec.js            # Doctor login → create Rx → PDF view
+    │   ├── pharmacist.spec.js        # Pharmacist login → scan QR → dispense
+    │   └── screenshots/              # PNG captures from each test (12 files)
     └── src/
         ├── main.jsx              # React DOM entry
         ├── App.jsx               # Router + all route definitions
@@ -547,7 +560,11 @@ node backend/run-migration.js backend/db/migrations/004_prescription_items.sql
 
 ## Testing
 
-The backend has a full Jest + Supertest test suite covering 13 areas:
+The project has **87 automated tests** split across two layers: 82 backend integration tests and 5 end-to-end browser tests.
+
+---
+
+### Backend — Jest + Supertest (82 tests)
 
 ```bash
 npm test --prefix backend          # Run all tests (--runInBand)
@@ -556,22 +573,47 @@ npm run test:watch --prefix backend  # Watch mode
 
 **Important:** Tests require a separate `TEST_DATABASE_URL` environment variable pointing to a throwaway database. The test suite **truncates all tables** before each run and will refuse to execute if `TEST_DATABASE_URL` equals `DATABASE_URL`.
 
-| Test file | What it covers |
-|---|---|
-| `auth.register.test.js` | Registration, duplicate email, missing fields |
-| `auth.verifyEmail.test.js` | Email OTP confirmation |
-| `auth.login.test.js` | Password validation, account status checks |
-| `auth.login2fa.test.js` | Login OTP flow, expiry, attempt limits |
-| `admin.test.js` | Application listing, approval, rejection, keypair generation |
-| `prescriptions.test.js` | Create, list, verify, dispense, tamper detection |
-| `otp.test.js` | Code generation, hashing, expiry, cooldown |
-| `mailer.test.js` | Transport selection, in-memory outbox |
-| `keyVault.test.js` | AES-256-GCM encrypt/decrypt round-trip |
-| `payload.test.js` | Canonical payload serialization |
-| `ratelimit.test.js` | Auth endpoint rate limiting |
-| `seedAdmin.test.js` | Admin bootstrap idempotency |
+| Test file | Tests | What it covers |
+| --- | --- | --- |
+| `auth.register.test.js` | — | Registration, duplicate email, missing fields |
+| `auth.verifyEmail.test.js` | — | Email OTP confirmation |
+| `auth.login.test.js` | — | Password validation, account status checks |
+| `auth.login2fa.test.js` | — | Login OTP flow, expiry, attempt limits |
+| `admin.test.js` | — | Application listing, approval, rejection, keypair generation |
+| `prescriptions.test.js` | — | Create, list, verify, dispense, tamper detection |
+| `otp.test.js` | — | Code generation, hashing, expiry, cooldown |
+| `mailer.test.js` | — | Transport selection, in-memory outbox |
+| `keyVault.test.js` | — | AES-256-GCM encrypt/decrypt round-trip |
+| `payload.test.js` | — | Canonical payload serialization |
+| `ratelimit.test.js` | — | Auth endpoint rate limiting |
+| `seedAdmin.test.js` | — | Admin bootstrap idempotency |
+| `middleware.test.js` | 5 | Unit tests for `authenticate` and `requireRole` (no DB) |
+| `app.test.js` | 3 | `/health`, 404 handler, role guard on admin route |
+| `prescriptions.access.test.js` | 7 | Role isolation + cross-doctor ownership enforcement |
+| `auth.edgecases.test.js` | 5 | Short password, non-existent email, past `valid_until`, re-dispense |
 
-The frontend has no automated tests; manual testing is done via the browser.
+---
+
+### Frontend — Playwright E2E (5 tests)
+
+End-to-end tests drive a real Chromium browser against locally running backend and frontend servers. Each test captures full-page screenshots as artifacts.
+
+```bash
+cd frontend
+npm run test:e2e               # Run all 5 E2E tests (starts servers automatically)
+```
+
+Playwright starts both servers on first run (`reuseExistingServer: true` reuses them on subsequent runs). A global-setup seeds test accounts and approves them before the tests run.
+
+| Test | Screenshots produced |
+| --- | --- |
+| `admin.spec.js` — Admin login → view pending applications → approve a doctor | `09-admin-dashboard.png`, `11-admin-application-detail.png`, `12-admin-approved-confirmed.png` |
+| `doctor.spec.js` — Doctor login → create prescription → view detail with QR code | `01-doctor-dashboard.png`, `02-doctor-new-prescription-filled.png`, `03-doctor-prescription-detail.png` |
+| `doctor.spec.js` — Prescription detail: PDF download button visible alongside QR | `04-doctor-prescription-pdf-view.png` |
+| `pharmacist.spec.js` — Pharmacist login → dashboard → navigate to scan page | `05-pharmacist-dashboard.png`, `06-pharmacist-scan-page.png` |
+| `pharmacist.spec.js` — Upload QR image → verify prescription → dispense item | `07-pharmacist-verified.png`, `08-pharmacist-dispensed.png` |
+
+Screenshots are saved to `frontend/e2e/screenshots/`. Test result artifacts (including per-test screenshots on failure) go to `frontend/e2e/test-results/`.
 
 ---
 

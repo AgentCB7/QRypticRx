@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
@@ -19,6 +20,7 @@
     "react-router-dom": "^6.24.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

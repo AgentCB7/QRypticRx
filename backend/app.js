@@ -40,6 +40,13 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/admin', adminRoutes);
 
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/test/outbox', (req, res) => {
+    const { outbox } = require('./lib/mailer');
+    res.json(outbox);
+  });
+}
+
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use((err, req, res, next) => {
