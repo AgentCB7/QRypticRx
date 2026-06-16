@@ -100,7 +100,7 @@ The backend is a stateless Express API — JWTs carry all session state. The fro
 | PostgreSQL (`pg`) | ^8.12 | Database driver |
 | `jsonwebtoken` | ^9.0 | JWT signing & verification |
 | `bcryptjs` | ^3.0 | Password hashing |
-| `nodemailer` | ^6.9 | Email delivery (Gmail SMTP) |
+| `resend` | ^3.0 | Email delivery (Resend API) |
 | `express-rate-limit` | ^8.5 | Brute-force protection |
 | `helmet` | ^7.1 | Security headers |
 | `cors` | ^2.8 | CORS middleware |
@@ -400,8 +400,8 @@ Every login requires a second factor:
 - Expires after **10 minutes**
 - Max **5 wrong attempts** before the code is invalidated
 - **60-second cooldown** before a new code can be requested
-- In production: delivered via Gmail SMTP (`lib/mailer.js`)
-- In development / test: printed to the server console and stored in an in-memory outbox
+- If `RESEND_API_KEY` is set: delivered via [Resend](https://resend.com) email API (sandbox mode allows only the email you signed up with)
+- If `RESEND_API_KEY` is not set: printed to the server console and stored in an in-memory outbox (development only)
 
 ### Account Lifecycle
 ```
@@ -460,7 +460,7 @@ Encoded as JSON string. Decoded client-side by `jsqr` from a camera stream or up
 ### Prerequisites
 - Node.js 18+
 - A PostgreSQL database (Supabase free tier works)
-- A Gmail account with an App Password (for email in production; optional locally)
+- A [Resend](https://resend.com) account (free tier, for OTP emails; optional for local dev)
 
 ### 1. Clone & install
 ```bash
@@ -508,12 +508,10 @@ The backend bootstraps an admin user on startup using `ADMIN_EMAIL` and `ADMIN_P
 | `KEY_SECRET` | Yes | Secret for AES-256-GCM encryption of doctor private keys; server refuses to start if unset |
 | `ADMIN_EMAIL` | Yes | Email of the bootstrapped admin user |
 | `ADMIN_PASSWORD` | Yes | Password of the bootstrapped admin user |
-| `SMTP_USER` | No | Gmail address for sending OTP emails (production) |
-| `SMTP_PASS` | No | Gmail App Password for `SMTP_USER` (production) |
-| `SMTP_FROM` | No | Optional `From` address; defaults to `SMTP_USER` |
+| `RESEND_API_KEY` | No | Resend API key for sending OTP emails; if not set, codes are printed to console (dev only) |
 | `PORT` | No | HTTP port; defaults to `3000` |
 
-If `SMTP_USER` / `SMTP_PASS` are not set, OTP codes are printed to the server console instead of being emailed — useful during local development.
+**Email delivery:** OTP codes are sent via [Resend](https://resend.com) (free tier available). If `RESEND_API_KEY` is not set, codes are printed to the server console instead — useful during local development.
 
 ### Frontend (`frontend/.env`)
 
@@ -604,7 +602,13 @@ cmds = ["npm install --prefix backend"]
 cmd = "node backend/server.js"
 ```
 
-Set all required environment variables in Railway's variable dashboard before deploying.
+**Environment variables for Railway:**
+
+- All required variables from [Environment Variables](#environment-variables) above
+- For email OTP delivery: set `RESEND_API_KEY` to your Resend API key (get one free at [resend.com](https://resend.com))
+- Set `ADMIN_EMAIL` to the email you registered Resend with (sandbox limitation: in free tier, OTPs can only be sent to this email)
+
+Set these variables in Railway's variable dashboard before deploying.
 
 ### Frontend — GitHub Pages
 
@@ -642,7 +646,12 @@ A `404.html` redirect script handles direct URL navigation (deep-linking) on Git
 ### Admin
 
 1. The first admin is bootstrapped from `ADMIN_EMAIL` / `ADMIN_PASSWORD` environment variables
-2. Log in and navigate to `/admin`
-3. Review pending applications — view applicant details, affiliation / pharmacy info
-4. Approve or reject; approved doctors automatically receive an RSA-2048 keypair
-5. Rejected applicants receive an email with the reason (if provided)
+2. **Email and login flow:**
+   - Set `ADMIN_EMAIL` to the email address you signed up with on Resend (production); in development, any email works as codes appear in the server console
+   - On login, you receive a 6-digit OTP code via email (or in the console if `RESEND_API_KEY` is not set)
+   - Enter the OTP at `/login/verify` to complete login
+   - **Sandbox limitation:** Resend free tier allows sending only to the email you registered with; to send to other emails, verify a domain at resend.com/domains
+3. Once logged in, navigate to `/admin`
+4. Review pending applications — view applicant details, affiliation / pharmacy info
+5. Approve or reject; approved doctors automatically receive an RSA-2048 keypair
+6. Rejected applicants receive an email with the reason (if provided)
