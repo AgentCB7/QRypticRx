@@ -1,6 +1,6 @@
 const outbox = [];
 
-async function sendMail({ to, subject, text }) {
+async function sendMail({ to, subject, text, html }) {
   if (!process.env.BREVO_API_KEY) {
     outbox.push({ to, subject, text });
     console.log(`[mailer] no API key configured; email to ${to}: ${subject}\n${text}`);
@@ -19,6 +19,7 @@ async function sendMail({ to, subject, text }) {
       to: [{ email: to }],
       subject,
       textContent: text,
+      ...(html && { htmlContent: html }),
     }),
   });
 
