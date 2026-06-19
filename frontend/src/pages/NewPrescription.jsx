@@ -242,7 +242,7 @@ export default function NewPrescription() {
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const [patient, setPatient] = useState({ patient_name: '', patient_ic: '' });
+  const [patient, setPatient] = useState({ patient_name: '', patient_phone: '' });
   const [validDays, setValidDays] = useState(30);
   const [medicines, setMedicines] = useState([newMedicine()]);
   const [error, setError] = useState('');
@@ -291,7 +291,7 @@ export default function NewPrescription() {
     try {
       const { prescription } = await prescriptionApi.create({
         patient_name: patient.patient_name,
-        patient_ic: patient.patient_ic,
+        patient_phone: patient.patient_phone,
         valid_until: validUntil.toISOString(),
         medicines: medicines.map(m => ({
           medication: m.medication,
@@ -333,8 +333,8 @@ export default function NewPrescription() {
                 <input id="patient_name" type="text" required value={patient.patient_name} onChange={setPatientField('patient_name')} placeholder="Full legal name" />
               </div>
               <div className="form-group">
-                <label htmlFor="patient_ic">Patient IC / ID</label>
-                <input id="patient_ic" type="text" required value={patient.patient_ic} onChange={setPatientField('patient_ic')} placeholder="IC or passport number" />
+                <label htmlFor="patient_phone">Patient Phone</label>
+                <input id="patient_phone" type="tel" inputMode="numeric" required value={patient.patient_phone} onChange={e => setPatient(p => ({ ...p, patient_phone: e.target.value.replace(/[^\d+]/g, '') }))} placeholder="e.g. +8801712345678" />
               </div>
             </div>
           </fieldset>

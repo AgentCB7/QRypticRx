@@ -265,7 +265,7 @@ Master prescription records, one row per prescription.
 | `id` | UUID PK | |
 | `doctor_id` | UUID FK → users | |
 | `patient_name` | VARCHAR(255) | |
-| `patient_ic` | VARCHAR(50) | Patient ID / IC number |
+| `patient_phone` | VARCHAR(100) | Patient phone number |
 | `valid_until` | TIMESTAMPTZ | Expiry date |
 | `status` | VARCHAR(50) | `active`, `dispensed`, `expired` |
 | `hash` | VARCHAR(64) | SHA-256 hex of canonical payload |
@@ -368,7 +368,7 @@ Immediately emails a 6-digit verification code. Account is `unverified` until th
 ```json
 {
   "patient_name": "John Doe",
-  "patient_ic": "990101-14-5678",
+  "patient_phone": "+8801712345678",
   "valid_until": "2026-09-01",
   "items": [
     {

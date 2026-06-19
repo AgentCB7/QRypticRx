@@ -11,7 +11,7 @@ const tomorrow = () => new Date(Date.now() + 24 * 3600 * 1000).toISOString();
 function rxBody(overrides = {}) {
   return {
     patient_name: 'Test Patient',
-    patient_ic: '900101-01-0001',
+    patient_phone: '+8801712345678',
     valid_until: tomorrow(),
     medicines: [{ medication: 'Aspirin', dosage: '1 tablet', duration_days: 3 }],
     ...overrides,

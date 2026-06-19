@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   id UUID PRIMARY KEY,
   doctor_id UUID NOT NULL REFERENCES users(id),
   patient_name VARCHAR(255) NOT NULL,
-  patient_ic VARCHAR(100) NOT NULL,
+  patient_phone VARCHAR(100) NOT NULL,
   medication VARCHAR(255),
   dosage VARCHAR(255),
   instructions TEXT,

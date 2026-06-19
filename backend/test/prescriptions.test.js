@@ -15,7 +15,7 @@ afterAll(() => pool.end());
 function rxBody(overrides = {}) {
   return {
     patient_name: 'Jane Doe',
-    patient_ic: '900101-01-1234',
+    patient_phone: '+8801712345678',
     valid_until: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
     medicines: [
       { medication: 'Amoxicillin', dosage: '1+0+1 tablet', duration_days: 7, notes: 'after food' },
@@ -102,16 +102,16 @@ test('verify returns valid for an untampered prescription', async () => {
   expect(res.body.valid).toBe(true);
 });
 
-test('verify masks patient_ic, returns medicines, and omits signature/hash', async () => {
+test('verify masks patient_phone, returns medicines, and omits signature/hash', async () => {
   const created = await createRx();
   const ptoken = await pharmacistToken();
   const res = await request(app)
     .post('/api/prescriptions/verify')
     .set('Authorization', `Bearer ${ptoken}`)
     .send({ id: created.prescription.id, hash: created.prescription.hash });
-  const ic = '900101-01-1234';
-  expect(res.body.prescription.patient_ic).toBe('*'.repeat(ic.length - 4) + ic.slice(-4));
-  expect(res.body.prescription.patient_ic).not.toContain('900101');
+  const phone = '+8801712345678';
+  expect(res.body.prescription.patient_phone).toBe('*'.repeat(phone.length - 4) + phone.slice(-4));
+  expect(res.body.prescription.patient_phone).not.toContain('+88017');
   expect(res.body.prescription.medicines).toHaveLength(2);
   expect(res.body.prescription.medicines[0].medication).toBe('Amoxicillin');
   expect(res.body.prescription.signature).toBeUndefined();

@@ -22,7 +22,7 @@ async function createTestPrescription(page) {
   const rxRes = await page.request.post(`${API}/api/prescriptions`, {
     data: {
       patient_name: 'Bob Tester',
-      patient_ic: '800101-01-9999',
+      patient_phone: '+8801898889999',
       valid_until: tomorrow,
       medicines: [{ medication: 'Paracetamol 500mg', dosage: '1+0+1 tablet', duration_days: 5 }],
     },

@@ -7,7 +7,7 @@ import { useAuth } from '../components/AuthContext';
 function RxDetails({ rx, onDispenseItem, dispensingId, disabled }) {
   const fields = [
     ['Patient Name', rx.patient_name],
-    ['Patient IC / ID', rx.patient_ic],
+    ['Patient Phone', rx.patient_phone],
     ['Prescribing Doctor', rx.doctor_name],
     ['Date Issued', new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })],
   ];

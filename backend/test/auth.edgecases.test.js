@@ -50,7 +50,7 @@ test('create prescription: valid_until in the past → 400', async () => {
     .set('Authorization', `Bearer ${makeToken(doc)}`)
     .send({
       patient_name: 'Test Patient',
-      patient_ic: '900101-01-0001',
+      patient_phone: '+8801712345678',
       valid_until: yesterday,
       medicines: [{ medication: 'Aspirin', dosage: '1 tablet', duration_days: 3 }],
     });
@@ -69,7 +69,7 @@ test('sequential re-dispense of the same item → second call returns 409', asyn
     .set('Authorization', `Bearer ${makeToken(doc)}`)
     .send({
       patient_name: 'Test Patient',
-      patient_ic: '900101-01-0001',
+      patient_phone: '+8801712345678',
       valid_until: tomorrow,
       medicines: [{ medication: 'Aspirin', dosage: '1 tablet', duration_days: 3 }],
     });

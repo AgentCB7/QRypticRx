@@ -125,7 +125,7 @@ export default function PrescriptionDetail() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem 1.5rem', marginBottom: '1.25rem' }}>
             <Field label="Patient Name" value={rx.patient_name} />
-            <Field label="Patient IC / ID" value={rx.patient_ic} />
+            <Field label="Patient Phone" value={rx.patient_phone} />
             <Field label="Prescribing Doctor" value={rx.doctor_name} />
             <Field label="Date Issued" value={new Date(rx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />
             <Field label="Valid Until" value={new Date(rx.valid_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} />

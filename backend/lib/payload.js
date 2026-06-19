@@ -1,7 +1,7 @@
 function buildPayload(fields) {
   return JSON.stringify({
     patient_name: fields.patient_name,
-    patient_ic: fields.patient_ic,
+    patient_phone: fields.patient_phone,
     medicines: (fields.medicines || []).map(m => ({
       medication: m.medication,
       dosage: m.dosage,

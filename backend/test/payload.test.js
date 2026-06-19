@@ -2,7 +2,7 @@ const { buildPayload } = require('../lib/payload');
 
 test('valid_until is normalized to ISO regardless of input form', () => {
   const base = {
-    patient_name: 'A', patient_ic: '900101-01-1234',
+    patient_name: 'A', patient_phone: '+8801712345678',
     medicines: [{ medication: 'X', dosage: '1x', duration_days: 7, notes: '' }],
     doctor_id: 'doc-1',
   };
@@ -14,18 +14,18 @@ test('valid_until is normalized to ISO regardless of input form', () => {
 
 test('top-level payload key order is stable', () => {
   const p = buildPayload({
-    patient_name: 'A', patient_ic: 'B',
+    patient_name: 'A', patient_phone: 'B',
     medicines: [{ medication: 'C', dosage: 'D', duration_days: 1, notes: 'E' }],
     valid_until: '2027-01-01T00:00:00.000Z', doctor_id: 'F',
   });
   expect(Object.keys(JSON.parse(p))).toEqual([
-    'patient_name', 'patient_ic', 'medicines', 'valid_until', 'doctor_id',
+    'patient_name', 'patient_phone', 'medicines', 'valid_until', 'doctor_id',
   ]);
 });
 
 test('each medicine has a fixed key order', () => {
   const p = buildPayload({
-    patient_name: 'A', patient_ic: 'B',
+    patient_name: 'A', patient_phone: 'B',
     medicines: [{ medication: 'C', dosage: 'D', duration_days: 1, notes: 'E' }],
     valid_until: '2027-01-01T00:00:00.000Z', doctor_id: 'F',
   });
@@ -36,7 +36,7 @@ test('each medicine has a fixed key order', () => {
 
 test('medicines preserve order and notes default to empty string', () => {
   const p = buildPayload({
-    patient_name: 'A', patient_ic: 'B',
+    patient_name: 'A', patient_phone: 'B',
     medicines: [
       { medication: 'First', dosage: '1+0+1', duration_days: 7 },
       { medication: 'Second', dosage: '0+0+1', duration_days: 3, notes: 'after food' },

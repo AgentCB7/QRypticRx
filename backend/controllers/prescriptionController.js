@@ -4,9 +4,9 @@ const pool = require('../db/pool');
 const { buildPayload } = require('../lib/payload');
 const { decryptPrivateKey } = require('../lib/keyVault');
 
-function maskIc(ic) {
-  if (!ic) return ic;
-  const s = String(ic);
+function maskPhone(phone) {
+  if (!phone) return phone;
+  const s = String(phone);
   const last4 = s.slice(-4);
   return '*'.repeat(Math.max(0, s.length - 4)) + last4;
 }
@@ -15,7 +15,7 @@ function publicView(rx, items) {
   return {
     id: rx.id,
     patient_name: rx.patient_name,
-    patient_ic: maskIc(rx.patient_ic),
+    patient_phone: maskPhone(rx.patient_phone),
     medicines: items.map(it => ({
       id: it.id,
       medication: it.medication,
@@ -32,11 +32,11 @@ function publicView(rx, items) {
 }
 
 async function createPrescription(req, res) {
-  const { patient_name, patient_ic, valid_until, medicines } = req.body;
+  const { patient_name, patient_phone, valid_until, medicines } = req.body;
   const doctor_id = req.user.id;
 
-  if (!patient_name || !patient_ic || !valid_until) {
-    return res.status(400).json({ error: 'patient_name, patient_ic and valid_until are required' });
+  if (!patient_name || !patient_phone || !valid_until) {
+    return res.status(400).json({ error: 'patient_name, patient_phone and valid_until are required' });
   }
   if (!Array.isArray(medicines) || medicines.length === 0) {
     return res.status(400).json({ error: 'At least one medicine is required' });
@@ -74,7 +74,7 @@ async function createPrescription(req, res) {
     }));
 
     const id = uuidv4();
-    const payload = buildPayload({ patient_name, patient_ic, medicines: normMedicines, valid_until, doctor_id });
+    const payload = buildPayload({ patient_name, patient_phone, medicines: normMedicines, valid_until, doctor_id });
     const hash = createHash('sha256').update(payload).digest('hex');
     const signer = createSign('SHA256');
     signer.update(payload);
@@ -84,9 +84,9 @@ async function createPrescription(req, res) {
     await client.query('BEGIN');
     await client.query(
       `INSERT INTO prescriptions
-         (id, doctor_id, patient_name, patient_ic, valid_until, hash, signature)
+         (id, doctor_id, patient_name, patient_phone, valid_until, hash, signature)
        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [id, doctor_id, patient_name, patient_ic, validUntilDate, hash, signature]
+      [id, doctor_id, patient_name, patient_phone, validUntilDate, hash, signature]
     );
     for (let i = 0; i < normMedicines.length; i++) {
       const m = normMedicines[i];
@@ -216,7 +216,7 @@ async function verifyPrescription(req, res) {
 
     const payload = buildPayload({
       patient_name: rx.patient_name,
-      patient_ic: rx.patient_ic,
+      patient_phone: rx.patient_phone,
       medicines: items.map(it => ({
         medication: it.medication,
         dosage: it.dosage,

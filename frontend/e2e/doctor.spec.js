@@ -23,7 +23,7 @@ test.describe.serial('Doctor journey', () => {
     await sharedPage.waitForURL('**/doctor/new');
 
     await sharedPage.fill('#patient_name', 'Alice Wonderland');
-    await sharedPage.fill('#patient_ic', '901231-07-5678');
+    await sharedPage.fill('#patient_phone', '+8801712345678');
     await sharedPage.fill('#medication-0', 'Amoxicillin 500mg');
     await sharedPage.locator('[aria-label="Medicine 1 Morning doses"] [aria-label="increase"]').click();
 
