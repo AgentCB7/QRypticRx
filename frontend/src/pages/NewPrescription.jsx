@@ -188,9 +188,9 @@ function MedicineRow({ med, index, onChange, onSetType, onSetUnit, onRemove, can
           transition: 'opacity 150ms ease, max-height 150ms ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Amount per dose</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Amount per dose</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <Counter
               ariaLabel={`Medicine ${index + 1} amount per dose`}
               value={med.amount}
@@ -199,16 +199,16 @@ function MedicineRow({ med, index, onChange, onSetType, onSetUnit, onRemove, can
               onChange={v => onChange(index, 'amount', v)}
               suffix={med.unit}
             />
+            <PillToggle
+              ariaLabel={`Medicine ${index + 1} liquid unit`}
+              value={med.unit}
+              onChange={u => onSetUnit(index, u)}
+              options={[
+                { value: 'mL', label: 'mL' },
+                { value: 'drops', label: 'drops' },
+              ]}
+            />
           </div>
-          <PillToggle
-            ariaLabel={`Medicine ${index + 1} liquid unit`}
-            value={med.unit}
-            onChange={u => onSetUnit(index, u)}
-            options={[
-              { value: 'mL', label: 'mL' },
-              { value: 'drops', label: 'drops' },
-            ]}
-          />
         </div>
       </div>
 

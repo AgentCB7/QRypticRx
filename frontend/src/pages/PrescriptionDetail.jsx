@@ -35,8 +35,20 @@ export default function PrescriptionDetail() {
   }, [id, token]);
 
   function handlePrint() {
-    const printContent = printRef.current?.innerHTML;
-    if (!printContent) return;
+    if (!printRef.current) return;
+    const clone = printRef.current.cloneNode(true);
+    const srcCanvas = printRef.current.querySelector('canvas');
+    const destCanvas = clone.querySelector('canvas');
+    if (srcCanvas && destCanvas) {
+      const img = document.createElement('img');
+      img.src = srcCanvas.toDataURL('image/png');
+      img.width = srcCanvas.width;
+      img.height = srcCanvas.height;
+      img.style.cssText = destCanvas.style.cssText;
+      img.setAttribute('aria-label', 'Prescription QR Code');
+      destCanvas.replaceWith(img);
+    }
+    const printContent = clone.innerHTML;
     const w = window.open('', '_blank');
     w.document.write(`
       <!doctype html><html><head>
