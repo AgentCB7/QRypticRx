@@ -13,8 +13,8 @@ function baseTemplate(title, bodyHtml) {
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:36px 40px;text-align:center;">
-              <div style="font-size:26px;font-weight:700;letter-spacing:2px;color:#ffffff;">
+            <td style="background:linear-gradient(135deg,#2e86c1 0%,#16213e 60%,#2e86c1 100%);padding:30px 40px;text-align:center;">
+              <div style="font-size:25px;font-weight:700;letter-spacing:2px;color:#ffffff;">
                 QRyptic<span style="color:#e94560;">Rx</span>
               </div>
               <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px;letter-spacing:1px;text-transform:uppercase;">
@@ -24,7 +24,7 @@ function baseTemplate(title, bodyHtml) {
           </tr>
           <!-- Body -->
           <tr>
-            <td style="padding:40px 40px 32px;">
+            <td style="padding:30px 40px 30px;">
               ${bodyHtml}
             </td>
           </tr>
@@ -55,7 +55,7 @@ function codeBlock(code) {
 
 function verificationEmail(code) {
   const html = baseTemplate('Verify your email', `
-    <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a2e;">Verify your email address</h2>
+    <h2 style="margin:0 0 10px;font-size:20px;color:#1a1a2e;">Verify your email address</h2>
     <p style="margin:0 0 4px;font-size:15px;color:#555e6d;line-height:1.6;">
       Thanks for registering with QRypticRx. Use the code below to verify your email address and complete your registration.
     </p>
@@ -74,7 +74,7 @@ function verificationEmail(code) {
 
 function loginCodeEmail(code) {
   const html = baseTemplate('Your login code', `
-    <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a2e;">Your login code</h2>
+    <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a2e;">Your login code</h2>
     <p style="margin:0 0 4px;font-size:15px;color:#555e6d;line-height:1.6;">
       Use the code below to complete your sign-in to QRypticRx.
     </p>
