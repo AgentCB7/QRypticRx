@@ -1,31 +1,34 @@
 const outbox = [];
 
-function useRealTransport() {
-  return !!process.env.RESEND_API_KEY;
-}
-
 async function sendMail({ to, subject, text }) {
-  console.log(`[mailer] RESEND_API_KEY present: ${!!process.env.RESEND_API_KEY}`);
-  if (!useRealTransport()) {
+  if (!process.env.BREVO_API_KEY) {
     outbox.push({ to, subject, text });
     console.log(`[mailer] no API key configured; email to ${to}: ${subject}\n${text}`);
     return;
   }
-  console.log(`[mailer] sending via Resend to ${to}`);
-  const { Resend } = require('resend');
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  try {
-    const result = await resend.emails.send({
-      from: 'QRypticRx <onboarding@resend.dev>',
-      to,
+
+  console.log(`[mailer] sending via Brevo to ${to}`);
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'QRypticRx', email: process.env.BREVO_SENDER_EMAIL },
+      to: [{ email: to }],
       subject,
-      text,
-    });
-    console.log(`[mailer] Resend response:`, result);
-  } catch (err) {
-    console.error(`[mailer] Resend error:`, err.message, err);
-    throw err;
+      textContent: text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[mailer] Brevo error ${res.status}:`, body);
+    throw new Error(`Brevo delivery failed: ${res.status}`);
   }
+
+  console.log(`[mailer] Brevo accepted message to ${to}`);
 }
 
 module.exports = { sendMail, outbox };
